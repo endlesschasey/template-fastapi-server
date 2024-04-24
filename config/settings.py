@@ -4,7 +4,7 @@ from dataclasses import dataclass
 class Setting:
     host = "192.168.30.144"
     port = 9494
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:shiyue@localhost:5432/CodexDB"
+    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:shiyue@localhost:5432/TemplateDB"
 
 
 config_setting = Setting()
