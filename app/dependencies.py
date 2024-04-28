@@ -2,6 +2,7 @@ from typing import Generator
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from cachetools import TTLCache
 
 from app.services.user_service import get_user
 from app.schemas.user import UserResponse
@@ -17,6 +18,9 @@ def get_db() -> Generator:
     finally:
         db.close()
 
+# 创建一个缓存，设置最大缓存数量和过期时间（单位：秒）
+token_cache = TTLCache(maxsize=1000, ttl=3600)
+
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
 ) -> UserResponse:
@@ -26,13 +30,18 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    # 向 OA 服务器发送请求验证 token
-    user_info = check_login_base(token)
-    
-    if user_info is None:
-        raise credentials_exception
-    
-    user = get_user(db, user_info)
+    # 检查 token 是否在缓存中
+    if token in token_cache:
+        user = token_cache[token]
+    else:
+        # 向 OA 服务器发送请求验证 token
+        user_info = check_login_base(token)
+        
+        if user_info is None:
+            raise credentials_exception
+        user = get_user(db, user_info)
+        # 将验证后的用户信息存入缓存
+        token_cache[token] = user
     
     return user
 

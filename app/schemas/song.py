@@ -1,111 +1,84 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 from app.models.table import Song
 
-class CustomGenerateRequest(BaseModel):
-    prompt: str
-    tags: str
-    title: str
-    make_instrumental: bool = False
-    wait_audio: bool = False
-
-class GenerateLyricsRequest(BaseModel):
-    prompt: str
-
-class GenerateRequest(BaseModel):
-    prompt: str
-    make_instrumental: bool = False
-    wait_audio: bool = False
-
 class SongBase(BaseModel):
-    title: Optional[str] = None
-    ids: Optional[str] = None
-    image_url: Optional[str] = None
-    audio_url: Optional[str] = None
-    video_url: Optional[str] = None
-    model_name: Optional[str] = None
-    gpt_description_prompt: Optional[str] = None
-    type: Optional[str] = None
-    prompt: Optional[str] = None
-    lyrics: Optional[str] = None
-    tags: Optional[str] = None
-    make_instrumental: Optional[bool] = None
-    is_custom: Optional[bool] = None
+    title: Optional[str] = Field(default=None, description="Title of the song")
+    image_url: Optional[str] = Field(default=None, description="URL of the song's image")
+    audio_url: Optional[str] = Field(default=None, description="URL of the song's audio")
+    tags: Optional[str] = Field(default=None, description="Tags describing the song")
+    make_instrumental: Optional[bool] = Field(default=None, description="Whether the song is instrumental")
 
 class SongResponse(SongBase):
-    id: int
-    is_active: bool
-    
+    id: int = Field(description="Unique identifier of the song")
+
     @classmethod
     def from_orm(cls, song: Song):
         return cls(
             id=song.id,
             title=song.title,
-            ids=song.ids,
             image_url=song.image_url,
             audio_url=song.audio_url,
-            video_url=song.video_url,
-            model_name=song.model_name,
-            gpt_description_prompt=song.gpt_description_prompt,
-            type=song.type,
-            prompt=song.prompt,
-            lyrics=song.lyrics,
             tags=song.tags,
             make_instrumental=song.make_instrumental,
-            is_custom=song.is_custom,
-            is_active=song.is_active
         )
 
     class Config:
         from_attributes = True
 
-class GenerateRequest(BaseModel):
-    songTitle: str
-    songDescription: str
-    instrumentalState: bool
-    modelVersion: str = "chirp-v3-0"
-
-class CustomGenerateRequest(BaseModel):
-    songTitle: str
-    songLyrics: str
-    songStyles: str
-    instrumentalState: bool
-    modelVersion: str = "chirp-v3-0"
-
-class SongResponse(BaseModel):
-    id: str
-    title: str
-    tags: str
-    image_url: str
-    audio_url: str
-
-class SongListRequest(BaseModel):
-    pageSize: int
-    pageNum: int
-
 class SongListResponse(BaseModel):
-    songsList: List[SongResponse]
-    total: int
+    songsList: List[SongResponse] = Field(description="List of songs")
+    total: int = Field(description="Total number of songs")
 
 class DeleteSongRequest(BaseModel):
-    songId: str
+    id: int = Field(description="Unique identifier of the song to be deleted")
 
 class DeleteSongResponse(BaseModel):
-    code: int
-    message: str
+    code: int = Field(description="Status code of the delete operation")
+    message: str = Field(description="Message detailing the result of the delete operation")
 
 class SongInfoRequest(BaseModel):
-    songId: str
+    id: int = Field(description="Unique identifier of the song for fetching details")
 
 class SongInfoResponse(BaseModel):
-    id: str
-    image_url: str
-    title: str
-    tags: str
-    created_at: str
-    prompt: str
-    lyric: str
+    id: int = Field(description="Unique identifier of the song")
+    image_url: str = Field(description="URL of the song's image")
+    title: str = Field(description="Title of the song")
+    tags: str = Field(description="Tags describing the song")
+    created_at: str = Field(description="Creation date of the song")
+    prompt: str = Field(description="Prompt used for creating the song")
+    lyrics: str = Field(description="Lyrics of the song")
 
-class GetCreditsResponse(BaseModel):
-    credits: int
+    @classmethod
+    def from_orm(cls, song: Song):
+        formatted_date = song.created_at.strftime('%Y-%m-%d %H:%M:%S') if song.created_at else None
+        return cls(
+            id=song.id,
+            image_url=song.image_url,
+            title=song.title,
+            tags=song.tags,
+            created_at=formatted_date,
+            prompt=song.gpt_description_prompt,
+            lyrics=song.lyrics,
+        )
+
+class CreditsResponse(BaseModel):
+    credits: int = Field(description="Amount of credits available")
+
+class GenerateRequest(BaseModel):
+    songTitle: str = Field(description="Title of the song to be generated")
+    songDescription: str = Field(description="Description of the song to be generated")
+    instrumentalState: bool = Field(description="State if the song is instrumental or not")
+
+class CustomGenerateRequest(BaseModel):
+    songTitle: str = Field(description="Title of the song to be generated")
+    songLyrics: str = Field(description="Lyrics of the song")
+    songStyles: str = Field(description="Styles or genres of the song")
+    instrumentalState: bool = Field(description="State if the song is instrumental or not")
+
+class SongListRequest(BaseModel):
+    pageSize: int = Field(description="Number of songs per page")
+    pageNum: int = Field(description="Page number to fetch")
+
+

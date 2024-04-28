@@ -1,8 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends
 
-from app.models.table import User
 from app.services.user_service import *
 from app.schemas.user import *
 from app.dependencies import *

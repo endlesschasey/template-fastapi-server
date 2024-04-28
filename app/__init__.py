@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy_utils import create_database, database_exists
-from app.routers import users
+from app.routers import *
 from app.utils.database import Base, engine
 
 def create_app():
@@ -10,7 +10,6 @@ def create_app():
         description="A sample API for universal template.",
         version="1.0.0",
     )
-
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
@@ -22,6 +21,7 @@ def create_app():
 
     # Include routers
     app.include_router(users.router, prefix="/api", tags=["users"])
+    app.include_router(song.router, prefix="/api", tags=["song"])
 
     # Create database tables
     if not database_exists(engine.url):

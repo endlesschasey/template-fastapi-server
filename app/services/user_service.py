@@ -13,9 +13,13 @@ def split_studio_team(dept: str) -> Tuple[str, Optional[str]]:
         return dept.strip(), None
 
 def get_user(db: Session, user_info: dict) -> Tuple[UserResponse, bool]:
+
     try:
         name = user_info["alias"]
         user = db.query(User).filter(User.name == name).first()
+        studio_name, team_name = split_studio_team(user_info["dept"])
+        studio = get_or_create_studio(db, studio_name)
+        team = get_or_create_team(db, team_name, studio.id)
         if user is None:
             user = User(
                 name=name,
@@ -25,9 +29,6 @@ def get_user(db: Session, user_info: dict) -> Tuple[UserResponse, bool]:
             )
             db.add(user)
 
-            studio_name, team_name = split_studio_team(user_info["dept"])
-            studio = get_or_create_studio(db, studio_name)
-            team = get_or_create_team(db, team_name, studio.id)
             db.commit()
             if team is not None:
                 team_member = TeamMember(user_id=user.id, team_id=team.id)
@@ -38,7 +39,8 @@ def get_user(db: Session, user_info: dict) -> Tuple[UserResponse, bool]:
         db.commit()
 
         db.refresh(user)
-        return UserResponse.model_validate(user)
+        user_response = UserResponse.from_orm(user)
+        return user_response
 
     except Exception as e:
         print(e)
@@ -92,7 +94,7 @@ def create_or_update_user(db: Session, user_info: dict) -> UserResponse:
                 db.commit()
 
         db.refresh(user)
-        return UserResponse.model_validate(user)
+        return UserResponse.from_orm(user)
 
     except Exception as e:
         print(e)
@@ -102,11 +104,11 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[UserResponse]:
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if user is None:
         return None
-    return UserResponse.model_validate(user)
+    return UserResponse.from_orm(user)
 
 def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponse]:
     users = db.query(User).filter(User.is_active == True).offset(skip).limit(limit).all()
-    return [UserResponse.model_validate(user) for user in users]
+    return [UserResponse.from_orm(user) for user in users]
 
 def update_user(db: Session, user_id: int, user_update: UserUpdate) -> Optional[UserResponse]:
     user = db.query(User).filter(User.id == user_id).first()
@@ -119,7 +121,7 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate) -> Optional[
 
     db.commit()
     db.refresh(user)
-    return UserResponse.model_validate(user)
+    return UserResponse.from_orm(user)
 
 def delete_user(db: Session, user_id: int) -> Optional[User]:
     user = db.query(User).filter(User.id == user_id).first()

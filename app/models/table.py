@@ -18,7 +18,6 @@ class User(Base):
     power = Column(Integer, default=0)
 
     teams = relationship("TeamMember", back_populates="user")
-    articles = relationship("Article", back_populates="author")
     songs = relationship("Song", back_populates="created_by")
 
     is_active = Column(Boolean, default=True)

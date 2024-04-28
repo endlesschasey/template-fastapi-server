@@ -1,49 +1,12 @@
 # lib/suno_api.py
 import json, os, time
-from typing import Dict, Any, List, Optional
 import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from typing import Dict, Any, List, Optional
 
-from .utils import logger, sleep
+from .utils import logger, sleep, AudioInfo
 
-class AudioInfo:
-    def __init__(self, id: str, title: Optional[str], image_url: Optional[str], lyric: Optional[str],
-                 audio_url: Optional[str], video_url: Optional[str], created_at: str, model_name: str,
-                 gpt_description_prompt: Optional[str], prompt: Optional[str], status: str,
-                 type: Optional[str], tags: Optional[str], duration: Optional[str]):
-        self.id = id
-        self.title = title
-        self.image_url = image_url
-        self.lyric = lyric
-        self.audio_url = audio_url
-        self.video_url = video_url
-        self.created_at = created_at
-        self.model_name = model_name
-        self.gpt_description_prompt = gpt_description_prompt
-        self.prompt = prompt
-        self.status = status
-        self.type = type
-        self.tags = tags
-        self.duration = duration
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "image_url": self.image_url,
-            "lyric": self.lyric,
-            "audio_url": self.audio_url,
-            "video_url": self.video_url,
-            "created_at": self.created_at,
-            "model_name": self.model_name,
-            "gpt_description_prompt": self.gpt_description_prompt,
-            "prompt": self.prompt,
-            "status": self.status,
-            "type": self.type,
-            "tags": self.tags,
-            "duration": self.duration
-        }
 class Singleton(type):
     _instances = {}
 
@@ -84,7 +47,7 @@ class SunoApi(metaclass=Singleton):
         return self
 
     async def get_auth_token(self) -> None:
-        get_session_url = f"{SunoApi.CLERK_BASE_URL}/v1/client?_clerk_js_version=4.70.5"
+        get_session_url = f"{self.CLERK_BASE_URL}/v1/client?_clerk_js_version=4.72.0-snapshot.vc141245"
         session_response = self.session.get(get_session_url).json()
         if not session_response.get('response', {}).get('last_active_session_id'):
             raise Exception("Failed to get session id, you may need to update the SUNO_COOKIE")
@@ -93,7 +56,7 @@ class SunoApi(metaclass=Singleton):
     async def keep_alive(self, is_wait: bool = False) -> None:
         if not self.sid:
             raise Exception("Session ID is not set. Cannot renew token.")
-        renew_url = f"{SunoApi.CLERK_BASE_URL}/v1/client/sessions/{self.sid}/tokens/api?_clerk_js_version=4.70.0"
+        renew_url = f"{SunoApi.CLERK_BASE_URL}/v1/client/sessions/{self.sid}/tokens?_clerk_js_version=4.72.0-snapshot.vc141245"
         renew_response = self.session.post(renew_url).json()
         logger.info("KeepAlive...\n")
         if is_wait:
@@ -104,15 +67,20 @@ class SunoApi(metaclass=Singleton):
         self.current_token = new_token
         self.session.headers.update({'Authorization': f'Bearer {new_token}'})
 
-    async def generate(self, prompt: str, title: str, make_instrumental: bool = False, wait_audio: bool = False) -> List[AudioInfo]:
-        await self.keep_alive(False)
+    async def generate(self, prompt: str, title: str, make_instrumental: bool = False, wait_audio: bool = True) -> List[AudioInfo]:
+        if not hasattr(self, 'current_token'):
+            await self.get_auth_token()
+        
         start_time = time.time()
-        audios = await self.generate_songs(prompt, False, None, None, make_instrumental, wait_audio)
+        audios = await self.generate_songs(prompt, False, None, title, make_instrumental, wait_audio)
         cost_time = time.time() - start_time
         logger.info(f"Cost time: {cost_time}")
         return audios
 
-    async def custom_generate(self, prompt: str, tags: str, title: str, make_instrumental: bool = False, wait_audio: bool = False) -> List[AudioInfo]:
+    async def custom_generate(self, prompt: str, tags: str, title: str, make_instrumental: bool = False, wait_audio: bool = True) -> List[AudioInfo]:
+        if not hasattr(self, 'current_token'):
+            await self.get_auth_token()
+
         start_time = time.time()
         audios = await self.generate_songs(prompt, True, tags, title, make_instrumental, wait_audio)
         cost_time = time.time() - start_time
@@ -124,11 +92,11 @@ class SunoApi(metaclass=Singleton):
         payload: Dict[str, Any] = {
             "make_instrumental": make_instrumental,
             "mv": "chirp-v3-0",
+            "title": title,
             "prompt": "",
         }
         if is_custom:
             payload["tags"] = tags
-            payload["title"] = title
             payload["prompt"] = prompt
         else:
             payload["gpt_description_prompt"] = prompt
@@ -142,7 +110,7 @@ class SunoApi(metaclass=Singleton):
             await sleep(5, 5)
             while time.time() - start_time < 100:
                 response = await self.get(song_ids)
-                all_completed = all(audio.status in ['streaming', 'complete'] for audio in response)
+                all_completed = all(audio.status in ['complete'] for audio in response)
                 if all_completed:
                     return response
                 last_response = response
@@ -153,7 +121,7 @@ class SunoApi(metaclass=Singleton):
             await self.keep_alive(True)
             return [AudioInfo(
                     id=audio["id"],
-                    title=audio.get("title", ""),
+                    title=title,
                     image_url=audio.get("image_url"),
                     lyric=audio["metadata"].get("prompt", ""),
                     audio_url=audio.get("audio_url"),
@@ -216,8 +184,7 @@ class SunoApi(metaclass=Singleton):
             "monthly_usage": response["monthly_usage"]
         }
 
-async def new_suno_api(cookie: str) -> SunoApi:
-    suno_api = SunoApi(cookie)
+async def new_suno_api() -> SunoApi:
+    cookie = os.environ.get("SUNO_COOKIE", "")
+    suno_api = SunoApi()
     return await suno_api.init()
-
-suno_api = new_suno_api(os.environ.get("SUNO_COOKIE", ""))
