@@ -1,11 +1,11 @@
 # lib/suno_api.py
-import json, os, time
+import os, time
 import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from typing import Dict, Any, List, Optional
 
-from .utils import logger, sleep, AudioInfo
+from app.lib.utils import logger, sleep, AudioInfo
 
 class Singleton(type):
     _instances = {}
@@ -28,7 +28,7 @@ class SunoApi(metaclass=Singleton):
             })
             retry_strategy = Retry(
                 total=3,
-                status_forcelist=[429, 500, 502, 503, 504],
+                status_forcelist=[429, 500, 502, 503, 555],
                 allowed_methods=["HEAD", "GET", "OPTIONS"]  # 使用 allowed_methods 参数
             )
             adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -87,7 +87,7 @@ class SunoApi(metaclass=Singleton):
         logger.info(f"Cost time: {cost_time}")
         return audios
 
-    async def generate_songs(self, prompt: str, is_custom: bool, tags: Optional[str], title: Optional[str], make_instrumental: Optional[bool], wait_audio: bool = False) -> List[AudioInfo]:
+    async def generate_songs(self, prompt: str, is_custom: bool, tags: Optional[str], title: Optional[str], make_instrumental: Optional[bool], wait_audio: bool = True) -> List[AudioInfo]:
         await self.keep_alive(False)
         payload: Dict[str, Any] = {
             "make_instrumental": make_instrumental,
@@ -174,6 +174,18 @@ class SunoApi(metaclass=Singleton):
             duration=audio["metadata"]["duration"]
         ) for audio in response]
 
+    async def extendAudio(self, audio_id: str, prompt: str="", continueAt: str="0", tags: str="", title: str=""):
+        await self.keep_alive(False)
+        response = self.session.post(f"{SunoApi.BASE_URL}/api/generate/v2/", json={
+            "continue_clip_id": audio_id,
+            "prompt": prompt,
+            "continue_at": continueAt,
+            "mv": "chirp-v3-0",
+            "tags": tags,
+            "title": title
+        })
+        return response
+
     async def get_credits(self) -> Dict[str, Any]:
         await self.keep_alive(False)
         response = self.session.get(f"{SunoApi.BASE_URL}/api/billing/info/").json()
@@ -184,7 +196,3 @@ class SunoApi(metaclass=Singleton):
             "monthly_usage": response["monthly_usage"]
         }
 
-async def new_suno_api() -> SunoApi:
-    cookie = os.environ.get("SUNO_COOKIE", "")
-    suno_api = SunoApi()
-    return await suno_api.init()

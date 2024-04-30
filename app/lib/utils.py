@@ -1,16 +1,41 @@
 import logging
-import asyncio
-import random
-from typing import Dict, Any, List, Optional
+import colorlog
+import random, asyncio
+from typing import Optional
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# 创建控制台处理器
 handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
+
+# 设置具有多种颜色的日志格式
+color_formatter = colorlog.ColoredFormatter(
+    "%(log_color)s%(levelname)s%(reset)s:     %(asctime)s%(reset)s - %(log_color)s%(message)s",
+    datefmt="%Y-%m-%d  %H:%M:%S",
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green,blue',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'red,bg_white',
+    },
+    secondary_log_colors={
+        'asctime': {
+            'DEBUG': 'white',
+            'INFO': 'white',
+            'WARNING': 'white',
+            'ERROR': 'white',
+            'CRITICAL': 'white',
+        }
+    },
+    reset=True
+)
+
+handler.setFormatter(color_formatter)
+
+# 添加处理器到logger
 logger.addHandler(handler)
 
 class AudioInfo:
@@ -65,9 +90,3 @@ async def sleep(x: int, y: int = None) -> None:
         timeout = random.randint(min_val, max_val)
     
     await asyncio.sleep(timeout)
-
-cors_headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-}

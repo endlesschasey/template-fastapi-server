@@ -10,6 +10,13 @@ class SongBase(BaseModel):
     tags: Optional[str] = Field(default=None, description="Tags describing the song")
     make_instrumental: Optional[bool] = Field(default=None, description="Whether the song is instrumental")
 
+class PublishSongRequest(BaseModel):
+    id: int = Field(description="Unique identifier of the song to be published")
+
+class PublishSongResponse(BaseModel):
+    code: int = Field(description="Status code of the publish operation")
+    message: str = Field(description="Message detailing the result of the publish operation")
+
 class SongResponse(SongBase):
     id: int = Field(description="Unique identifier of the song")
 
@@ -44,11 +51,11 @@ class SongInfoRequest(BaseModel):
 class SongInfoResponse(BaseModel):
     id: int = Field(description="Unique identifier of the song")
     image_url: str = Field(description="URL of the song's image")
-    title: str = Field(description="Title of the song")
-    tags: str = Field(description="Tags describing the song")
-    created_at: str = Field(description="Creation date of the song")
-    prompt: str = Field(description="Prompt used for creating the song")
-    lyrics: str = Field(description="Lyrics of the song")
+    title: Optional[str] = Field(description="Title of the song")
+    tags: Optional[str] = Field(description="Tags describing the song")
+    created_at: Optional[str] = Field(description="Creation date of the song")
+    prompt: Optional[str] = Field(description="Prompt used for creating the song")
+    lyrics: Optional[str] = Field(description="Lyrics of the song")
 
     @classmethod
     def from_orm(cls, song: Song):

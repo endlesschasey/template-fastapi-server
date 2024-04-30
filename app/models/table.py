@@ -19,6 +19,7 @@ class User(Base):
 
     teams = relationship("TeamMember", back_populates="user")
     songs = relationship("Song", back_populates="created_by")
+    logs = relationship("Log", back_populates="user")
 
     is_active = Column(Boolean, default=True)
 
@@ -91,6 +92,25 @@ class Song(Base):
     deleted_at = Column(BeijingDateTime)
 
     created_by = relationship("User", back_populates="songs")
+    logs = relationship("Log", back_populates="song")
 
     def __repr__(self):
         return f"<Song(id={self.id}, title='{self.title}')>"
+
+class Log(Base):
+    __tablename__ = "logs"
+
+    id = Column(Integer, primary_key=True)
+    song_id = Column(Integer, ForeignKey("songs.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+
+    action = Column(String)
+    message = Column(String)
+    created_at = Column(BeijingDateTime, default=datetime.now())
+
+    user = relationship("User", back_populates="logs")
+    song = relationship("Song", back_populates="logs")
+
+    def __repr__(self):
+        return f"<Log(id={self.id}, action='{self.action}')>"
+    

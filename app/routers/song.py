@@ -7,12 +7,13 @@ from app.schemas.song import *
 from app.schemas.user import UserResponse
 from app.dependencies import get_current_active_user, get_db
 from app.services.song_service import SongService
+from app.lib.utils import  logger
 
 
 router = APIRouter()
 
-@router.get("/get_file/{file_type}/{file_name}")
-async def get_file(file_type: str, file_name: str):
+@router.get("/get_file/{file_type}/{file_name}/{flag}")
+async def get_file(file_type: str, file_name: str, flag: str = None, db: Session = Depends(get_db),):
     # 定义文件所在的目录
     base_dir = "OUTPUT"
     
@@ -21,8 +22,14 @@ async def get_file(file_type: str, file_name: str):
     
     # 检查文件是否存在
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
+        logger.error(f"File not found: {file_path}")
+        raise HTTPException(status_code=555, detail="File not found")
     
+    # 如果flag为download，则记录日志
+    if flag == "download":
+        song_service = SongService()
+        await song_service.log_download(db, file_name)
+        
     # 返回文件响应
     return FileResponse(file_path)
 
@@ -106,7 +113,7 @@ async def song_info(
     song_service = SongService()
     song_info = await song_service.get_song_info(db, info_request, current_user)
     if not song_info:
-        raise HTTPException(status_code=404, detail="Song not found")
+        raise HTTPException(status_code=555, detail="Song not found")
     return song_info
 
 # 获取积分
