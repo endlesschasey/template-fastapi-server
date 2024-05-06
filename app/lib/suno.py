@@ -23,7 +23,7 @@ class SunoApi(metaclass=Singleton):
         if not hasattr(self, 'session'):
             self.session = requests.Session()
             self.session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Cookie': cookie
             })
             retry_strategy = Retry(
@@ -47,7 +47,7 @@ class SunoApi(metaclass=Singleton):
         return self
 
     async def get_auth_token(self) -> None:
-        get_session_url = f"{self.CLERK_BASE_URL}/v1/client?_clerk_js_version=4.72.0-snapshot.vc141245"
+        get_session_url = f"{self.CLERK_BASE_URL}/v1/client?_clerk_js_version=4.72.2"
         session_response = self.session.get(get_session_url).json()
         if not session_response.get('response', {}).get('last_active_session_id'):
             raise Exception("Failed to get session id, you may need to update the SUNO_COOKIE")
@@ -56,7 +56,7 @@ class SunoApi(metaclass=Singleton):
     async def keep_alive(self, is_wait: bool = False) -> None:
         if not self.sid:
             raise Exception("Session ID is not set. Cannot renew token.")
-        renew_url = f"{SunoApi.CLERK_BASE_URL}/v1/client/sessions/{self.sid}/tokens?_clerk_js_version=4.72.0-snapshot.vc141245"
+        renew_url = f"{SunoApi.CLERK_BASE_URL}/v1/client/sessions/{self.sid}/tokens?_clerk_js_version=4.72.2"
         renew_response = self.session.post(renew_url).json()
         logger.info("KeepAlive...\n")
         if is_wait:

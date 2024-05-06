@@ -19,6 +19,8 @@ def get_user(db: Session, user_info: dict) -> Tuple[UserResponse, bool]:
         user = db.query(User).filter(User.name == name).first()
         studio_name, team_name = split_studio_team(user_info["dept"])
         studio = get_or_create_studio(db, studio_name)
+        if team_name is None:
+            team_name = studio_name
         team = get_or_create_team(db, team_name, studio.id)
         if user is None:
             user = User(

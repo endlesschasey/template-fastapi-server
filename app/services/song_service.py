@@ -114,7 +114,7 @@ class SongService:
             Song.created_at <= today_end
         ).count()
         
-        return CreditsResponse(credits=((6 - count) // 2))
+        return CreditsResponse(credits=((10 - count) // 2))
 
     @staticmethod
     def download_file(url: str, output_path: str) -> None:
@@ -153,7 +153,7 @@ class SongService:
                 if "=" in audio.audio_url:
                     audio_filename = f'{audio.audio_url.split("=")[1]}.mp3'
                 else:
-                    audio_filename = f'{audio.audio_url.split("-")[-1]}.mp3'
+                    audio_filename = f'{audio.audio_url.split("-")[-1]}'
                 audio_path = os.path.join("OUTPUT", "audios", audio_filename)
                 os.makedirs(os.path.dirname(audio_path), exist_ok=True)
 
